@@ -3,17 +3,23 @@ import os
 import neptune
 import praw
 from datetime import datetime
-import json
+from utils.file_utils import save_progress, load_progress, save_final_csv
+from utils.reddit_helpers import reddit_connect, track_scraping_metrics
 import time
 import pandas as pd
 from tqdm import tqdm
 import sys
 
+from pathlib import Path
+Root = Path('.').absolute().parent
+SCRIPTS = Root / r'C:\Users\krishnadas\Projects\ML Projects\ManipDetect\research\scripts'
+DATA = Root/ r'C:\Users\krishnadas\Projects\ML Projects\ManipDetect\data'
 
 def build_dataset(reddit, target_posts=10):
     """Build the dataset by scraping WallStreetBetsnew posts"""
     
     # Load previous progress
+    filepath = SCRIPTS/'temp_data'  # Define the path to save progress
     posts_data, last_post_id = load_progress()
     start_count = len(posts_data)
     
@@ -61,11 +67,14 @@ def build_dataset(reddit, target_posts=10):
             try:
                 # Handle author safely
                 author_name = "[deleted]"
+                author_id = None
                 if submission.author is not None:
                     try:
                         author_name = submission.author.name
+                        author_id = submission.author.id
                     except Exception:
                         author_name = "[unavailable]"
+                        author_id = None
                 
                 # Extract post text content with better categorization
                 post_text = ""
@@ -95,7 +104,7 @@ def build_dataset(reddit, target_posts=10):
                     "text": post_text,  # The actual post content
                     "post_type": post_type,  # Type of post for analysis
                     "author_name": author_name,  # Author's name
-                    "author_id": submission.author.id if submission.author else None,  # Author's ID
+                    "author_id": author_id,  # Author's ID
                     "score": submission.score,
                     "created_utc": submission.created_utc,
                     "num_comments": submission.num_comments,
@@ -125,7 +134,7 @@ def build_dataset(reddit, target_posts=10):
         scraping_duration = end_time - start_time
         
         # Save final CSV dataset
-        csv_filename = save_final_csv(posts_data)
+        csv_filename = save_final_csv(posts_data, filepath)
         
         # Return metrics for tracking
         metrics = {
@@ -134,7 +143,7 @@ def build_dataset(reddit, target_posts=10):
             'scraping_duration_minutes': scraping_duration / 60,
             'errors_encountered': errors_count,
             'posts_per_minute': (len(posts_data) - start_count) / (scraping_duration / 60) if scraping_duration > 0 else 0,
-            'csv_filename': csv_filename,
+            'csv_filename': str(csv_filename),
             'total_posts_available': len(all_posts),
             'resumed_from': start_count if start_count > 0 else None
         }
@@ -158,17 +167,15 @@ def build_dataset(reddit, target_posts=10):
         return posts_data, {'fatal_error': str(e), 'posts_at_error': len(posts_data)}
 
 
-
-
 def scrape_wallstreetbetsnew():
     """Main function that orchestrates the scraping process"""
     # Build the dataset
     reddit = reddit_connect()
     print("Connected to Reddit API successfully.")
-    posts_data, metrics = build_dataset(reddit, target_posts=10)
+    posts_data, metrics = build_dataset(reddit, target_posts)
     
     # Track metrics in Neptune
-    track_scraping_metrics(posts_data, metrics, target_posts=10)
+    track_scraping_metrics(posts_data, metrics, target_posts)
     
     return posts_data, metrics
 

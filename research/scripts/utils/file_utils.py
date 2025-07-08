@@ -48,11 +48,10 @@ def save_progress(posts_data, last_post_id, filename="scraping_progress.json"):
         df = pd.DataFrame(posts_data)
         df.to_csv("wallstreetbetsnew_posts.csv", index=False, encoding='utf-8')
 
-def save_final_csv(posts_data):
+def save_final_csv(posts_data, filepath):
     """Save final dataset as CSV with proper formatting"""
     if not posts_data:
         return
-        
     df = pd.DataFrame(posts_data)
     
     # Convert timestamp to readable format
@@ -73,7 +72,8 @@ def save_final_csv(posts_data):
     
     # Save with timestamp in filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_filename = f"wallstreetbetsnew_posts_{timestamp}.csv"
+    # csv_filename = f"wallstreetbetsnew_posts_{timestamp}.csv"
+    csv_filename = filepath / f"wallstreetbetsnew_posts_{timestamp}.csv"
     df.to_csv(csv_filename, index=False, encoding='utf-8')
     
     return csv_filename
