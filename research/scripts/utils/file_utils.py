@@ -26,16 +26,16 @@ def load_progress(filename="scraping_progress.json"):
                     'url': post.get('url', '')
                 }
                 consistent_posts.append(consistent_post_dict)
-            
-            return consistent_posts, data.get('last_post_id', None)
+            scraped_ids = [post.get('post_id') for post in consistent_posts]
+            return consistent_posts, scraped_ids
     except FileNotFoundError:
-        return [], None
+        return [], set()
 
-def save_progress(posts_data, last_post_id, filename="scraping_progress.json"):
+def save_progress(posts_data, scraped_ids, filename="scraping_progress.json"):
     """Save current progress to file"""
     progress_data = {
         'posts': posts_data,
-        'last_post_id': last_post_id,
+        'scraped_ids': scraped_ids,
         'saved_at': datetime.now().isoformat(),
         'total_posts': len(posts_data)
     }

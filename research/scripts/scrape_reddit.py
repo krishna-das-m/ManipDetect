@@ -12,19 +12,21 @@ import sys
 
 from pathlib import Path
 Root = Path('.').absolute().parent
-SCRIPTS = Root / r'C:\Users\krishnadas\Projects\ML Projects\ManipDetect\research\scripts'
-DATA = Root/ r'C:\Users\krishnadas\Projects\ML Projects\ManipDetect\data'
+# DATA = Root/ r'C:\Users\krishnadas\Projects\ML Projects\ManipDetect\data'
+SCRIPTS = Root / r'scripts'
+DATA = Root/ r'C:\Users\Admin\Projects\ML Projects\ManipDetect\data'
 
-def build_dataset(reddit, target_posts=10):
+def build_dataset(reddit, target_posts):
     """Build the dataset by scraping WallStreetBetsnew posts"""
     
     # Load previous progress
     filepath = SCRIPTS/'temp_data'  # Define the path to save progress
-    posts_data, last_post_id = load_progress()
+    posts_data, scraped_ids = load_progress()
     start_count = len(posts_data)
     
     if start_count > 0:
         print(f"Resuming from {start_count} previously scraped posts...")
+        print(f"Will skip {len(scraped_ids)} already scraped post IDs...")
     else:
         print("Starting fresh scrape...")
     
@@ -46,19 +48,28 @@ def build_dataset(reddit, target_posts=10):
         print("Fetching post list from Reddit...")
         all_posts = list(posts_generator)
         
-        # Skip posts we already have if resuming
-        if last_post_id:
-            # Find where to resume
-            resume_index = 0
-            for i, post in enumerate(all_posts):
-                if post.id == last_post_id:
-                    resume_index = i + 1
-                    break
-            all_posts = all_posts[resume_index:]
-            print(f"Resuming from post index {resume_index}")
+        # Filter out already scraped posts (MUCH MORE RELIABLE)
+        print(f"Total posts from Reddit: {len(all_posts)}")
+        new_posts = [post for post in all_posts if post.id not in scraped_ids]
+        print(f"New posts to scrape: {len(new_posts)}")
+        # Limit to remaining posts needed
+        remaining_needed = target_posts - start_count
+        posts_to_process = new_posts[:remaining_needed]
+        
+        print(f"Will process {len(posts_to_process)} posts to reach target of {target_posts}")
+        # # Skip posts we already have if resuming
+        # if last_post_id:
+        #     # Find where to resume
+        #     resume_index = 0
+        #     for i, post in enumerate(all_posts):
+        #         if post.id == last_post_id:
+        #             resume_index = i + 1
+        #             break
+        #     all_posts = all_posts[resume_index:]
+        #     print(f"Resuming from post index {resume_index}")
         
         # Process remaining posts
-        posts_to_process = min(len(all_posts), target_posts - start_count)
+        # posts_to_process = min(len(all_posts), target_posts - start_count)
         
         for i, submission in enumerate(tqdm(all_posts[:posts_to_process], 
                                         desc="Scraping posts", 
